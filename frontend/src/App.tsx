@@ -5,6 +5,7 @@ import ChatInterface from './components/ChatInterface';
 import Input from './components/Input';
 import Sidebar from './components/Sidebar';
 import { ICONS } from './constants';
+import { api } from './services/api';
 import { GeminiService } from './services/geminiService';
 import { AuthState, ChatState, Conversation, Message, Role } from './types';
 
@@ -43,23 +44,24 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     if (!nameInput.trim()) {
       setLoginError('Display Name is required.');
       return;
     }
-    // Simple mock auth
-    const user = {
-      id: uuidv4(),
-      name: nameInput,
-    };
-    setAuth({ user, isAuthenticated: true });
+    try {
+      const user = await api.createUser(nameInput.trim());
+      setAuth({ user, isAuthenticated: true });
 
-    // Create first chat if none
-    if (chatState.conversations.length === 0) {
-      createNewChat();
+      // Create first chat if none
+      if (chatState.conversations.length === 0) {
+        createNewChat();
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('Unable to connect to server. Please try again.');
     }
   };
 
@@ -103,6 +105,7 @@ const App: React.FC = () => {
 
   const handleSendMessage = async (text: string) => {
     if (!gemini || !chatState.activeConversationId) return;
+    if (!auth.user) return;
 
     const currentChatId = chatState.activeConversationId;
 
@@ -125,6 +128,13 @@ const App: React.FC = () => {
     });
 
     try {
+      await api.createMessage({
+        conversationId: currentChatId,
+        userId: auth.user.id,
+        role: Role.USER,
+        content: text,
+      });
+
       // 2. Prepare for AI Response
       const aiMsgId = uuidv4();
       const placeholderAiMsg: Message = {
@@ -182,6 +192,13 @@ const App: React.FC = () => {
           return c;
         }),
       }));
+
+      await api.createMessage({
+        conversationId: currentChatId,
+        userId: auth.user.id,
+        role: Role.MODEL,
+        content: accumulatedText,
+      });
 
       // Title generation omitted for visual similarity consistency - focusing on the single session flow
     } catch (error) {
@@ -241,6 +258,35 @@ const App: React.FC = () => {
   const activeConversation = chatState.conversations.find(
     c => c.id === chatState.activeConversationId
   );
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !chatState.activeConversationId) return;
+
+    let isMounted = true;
+    const syncMessages = async () => {
+      try {
+        const remoteMessages = await api.getConversationMessages(chatState.activeConversationId);
+        if (!isMounted) return;
+
+        setChatState(prev => {
+          const updatedConvs = prev.conversations.map(c => {
+            if (c.id !== chatState.activeConversationId) return c;
+            const merged =
+              remoteMessages.length >= c.messages.length ? remoteMessages : c.messages;
+            return { ...c, messages: merged, updatedAt: Date.now() };
+          });
+          return { ...prev, conversations: updatedConvs };
+        });
+      } catch (error) {
+        console.error('Sync messages error:', error);
+      }
+    };
+
+    syncMessages();
+    return () => {
+      isMounted = false;
+    };
+  }, [auth.isAuthenticated, chatState.activeConversationId]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-ayur-bg font-sans">
