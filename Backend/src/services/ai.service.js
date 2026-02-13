@@ -37,7 +37,7 @@ class AIService {
 
   getClient() {
     if (!config.GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY is not set');
+      throw new Error('GOOGLE_API_KEY or GEMINI_API_KEY is not set');
     }
     if (!this.ai) {
       this.ai = new GoogleGenerativeAI(config.GOOGLE_API_KEY);

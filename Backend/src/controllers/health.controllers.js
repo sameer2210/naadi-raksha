@@ -1,10 +1,17 @@
 import mongoose from 'mongoose';
+import config from '../config/config.js';
 import HealthData from '../models/health.model.js';
 
 const toNumber = value => {
   if (value === null || value === undefined || value === '') return undefined;
   const parsed = Number(value);
   return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const toDate = value => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
 const cleanupObject = obj => {
@@ -44,12 +51,12 @@ const buildHealthPayload = body => {
   const metrics = buildMetrics(body);
 
   const payload = cleanupObject({
-    deviceId: body?.deviceId,
+    deviceId: typeof body?.deviceId === 'string' ? body.deviceId.trim() : body?.deviceId,
     deviceType: body?.deviceType,
     firmwareVersion: body?.firmwareVersion,
     patientId: body?.patientId,
-    capturedAt: body?.capturedAt ?? body?.timestamp ?? body?.time,
-    receivedAt: body?.receivedAt,
+    capturedAt: toDate(body?.capturedAt ?? body?.timestamp ?? body?.time),
+    receivedAt: toDate(body?.receivedAt),
     metrics: Object.keys(metrics).length ? metrics : undefined,
     activity: body?.activity,
     battery: body?.battery,
@@ -63,6 +70,10 @@ const buildHealthPayload = body => {
 
 export const receiveHealthData = async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ message: 'Invalid payload' });
+    }
+
     const healthPayload = buildHealthPayload(req.body);
 
     if (!healthPayload.deviceId) {
@@ -83,7 +94,9 @@ export const receiveHealthData = async (req, res) => {
       data,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: config.IS_PROD ? 'Failed to store health data' : error.message });
   }
 };
 
@@ -104,7 +117,9 @@ export const getLatestDeviceHealthData = async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: config.IS_PROD ? 'Failed to fetch health data' : error.message });
   }
 };
 
@@ -140,7 +155,9 @@ export const getDeviceHealthData = async (req, res) => {
 
     return res.json({ success: true, count: data.length, data });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: config.IS_PROD ? 'Failed to fetch health data' : error.message });
   }
 };
 
@@ -180,6 +197,8 @@ export const getPatientHealthData = async (req, res) => {
 
     return res.json({ success: true, count: data.length, data });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: config.IS_PROD ? 'Failed to fetch health data' : error.message });
   }
 };
