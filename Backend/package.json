@@ -1,5 +1,5 @@
 {
-  "name": "naadi-raksha-backend",
+  "name": "SpandaVidyaAi-backend",
   "version": "1.0.0",
   "description": "AI-powered naadi raksha backend with Express, Mongoose, and Google GenAI",
   "main": "server.js",
@@ -21,6 +21,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@google/genai": "^1.41.0",
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",

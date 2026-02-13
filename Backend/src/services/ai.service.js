@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import config from '../config/config.js';
 
 const MAX_HISTORY_MESSAGES = 20;
@@ -36,11 +36,11 @@ class AIService {
   }
 
   getClient() {
-    if (!config.GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY or GEMINI_API_KEY is not set');
+    if (!config.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
     }
     if (!this.ai) {
-      this.ai = new GoogleGenerativeAI(config.GOOGLE_API_KEY);
+      this.ai = new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });
     }
     return this.ai;
   }
@@ -71,19 +71,16 @@ class AIService {
       throw new Error('message is required');
     }
 
+    const prompt = this.buildPrompt({ history, message, userName });
     const client = this.getClient();
-    const model = client.getGenerativeModel({
+    const response = await client.models.generateContentStream({
       model: config.GEMINI_MODEL,
-      generationConfig: {
-        temperature: 0.7,
-      },
+      contents: prompt,
+      config: { temperature: 0.7 },
     });
 
-    const prompt = this.buildPrompt({ history, message, userName });
-    const result = await model.generateContentStream(prompt);
-
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
+    for await (const chunk of response) {
+      const text = chunk.text;
       if (text) {
         yield text;
       }

@@ -35,17 +35,17 @@ const _config = {
   FRONTEND_URLS: envOrigins.length ? envOrigins : defaultOrigins,
 
   PORT: toNumber(process.env.PORT, 5000),
-  MONGODB_URI: process.env.MONGODB_URI || (isProd ? '' : 'mongodb://localhost:27017/naadi-raksha'),
+  MONGODB_URI: process.env.MONGODB_URI || (isProd ? '' : 'mongodb://localhost:27017/SpandaVidyaAi'),
   JWT_SECRET: process.env.JWT_SECRET || '',
-  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
-  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.0-pro',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
   LOG_LEVEL: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
   RATE_LIMIT_WINDOW_MS: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
   RATE_LIMIT_MAX: toNumber(process.env.RATE_LIMIT_MAX, isProd ? 300 : 2000),
   REQUEST_BODY_LIMIT: process.env.REQUEST_BODY_LIMIT || '10mb',
 };
 
-const requiredInProd = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_API_KEY', 'FRONTEND_URLS'];
+const requiredInProd = ['MONGODB_URI', 'JWT_SECRET', 'GEMINI_API_KEY', 'FRONTEND_URLS'];
 const missing = requiredInProd.filter(key => {
   if (key === 'FRONTEND_URLS') return !_config.FRONTEND_URLS.length;
   return !_config[key];
